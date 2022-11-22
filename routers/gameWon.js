@@ -8,22 +8,22 @@ const auth = require("../auth/auth")
 
 
 // post win
-router.post("/wonGame",auth, gameWonObj.gameWon);
+router.post("/wonGame",auth,gameWonObj.gameWon);
 
 
 
 // get all Game Won
-router.get("/getWonByDate", gameWonObj.getWonByDate);
+router.get("/getWonByDate",auth, gameWonObj.getWonByDate);
 
 // get all won games by date and address
-router.get('/getGameWonByDateAndAddress',gameWonObj.getWonByDateAndAddress);
+router.get('/getGameWonByDateAndAddress',auth, gameWonObj.getWonByDateAndAddress);
 
 // search by Address
-router.get('/getDataByAddress',gameWonObj.getDataByAddress);
+router.get('/getDataByAddress',auth, gameWonObj.getDataByAddress);
 
 
 // claimUserAllRewards
-router.get('/claimUserAllRewards',gameWonObj.claimUserAllRewards);
+router.get('/claimUserAllRewards', auth,gameWonObj.claimUserAllRewards);
 
 
 

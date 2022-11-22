@@ -278,7 +278,7 @@ const claimUserAllRewards = async (req, res) => {
 
         var allFilteredData = await getFilteredData(req.body.Address);
         
-        console.log(allFilteredData)
+        console.log("this is data",allFilteredData)
         
         
         if(allFilteredData.length > 0){
@@ -289,46 +289,55 @@ const claimUserAllRewards = async (req, res) => {
           var Wins = [];
           var Date = [];
           
-           await allFilteredData.forEach(async(item,index)=>{
-            
-              // blocchain
-              // var newClaimData = await userClaimRecord(item.Address, item.Date);
-              var newClaimData = 9;
-            
-              if(newClaimData > item.Claims){
+          // await allFilteredData.forEach(async(item,index)=>{
+        
+          for(var x=0; x < allFilteredData.length; x++){
 
-                  item.Claims = newClaimData;
-                  await item.save();
+        
+              // blocchain
+ 
+                          
+              var newClaimData = await userClaimRecord(allFilteredData[x].Address, allFilteredData[x].Date)
+              newClaimData = parseInt(newClaimData)
+              
+              
+              console.log("claim",newClaimData)
+
+              if(newClaimData > allFilteredData[x].Claims){
+
+                allFilteredData[x].Claims = newClaimData;
+                await allFilteredData[x].save()
 
               } 
 
-              var winsMinusClaim = item.Wins - newClaimData;
-              console.log("winsMinusClaim",winsMinusClaim)
+              var winsMinusClaim = allFilteredData[x].Wins - newClaimData;
+              // console.log("winsMinusClaim",winsMinusClaim)
 
-              console.log("item address", item.Address)
-              console.log("item item.Wins", item.Wins)
-              console.log("item item.Date", item.Date)
+              // console.log("item address", item.Address)
+              // console.log("item item.Wins", item.Wins)
+              // console.log("item item.Date", item.Date)
 
 
-              if(item.Claims < item.Wins){
+              if(allFilteredData[x].Claims < allFilteredData[x].Wins){
                 
                 
-                var hash = await getmessageHash(item.Address, winsMinusClaim, item.Date);
-                var sign = await signMessage(hash, process.env.SIGNER_ADDRESS, process.env.SIGNER_PK);
+               var hash = getmessageHash(allFilteredData[x].Address, winsMinusClaim, allFilteredData[x].Date)
+                // var sign = await signMessage(hash, process.env.SIGNER_ADDRESS, process.env.SIGNER_PK);
+              var sign = signMessage(hash, process.env.SIGNER_ADDRESS, process.env.SIGNER_PK)
                 
                 console.log("this is Hash", sign);
 
-                 Address.push(item.Address);
+                 Address.push(allFilteredData[x].Address);
                  signature.push(sign);
                  Wins.push(winsMinusClaim);
-                 Date.push( item.Date);
+                 Date.push(allFilteredData[x].Date);
              
 
                 
               }
               
-            });
-            
+            // });
+          }
             jsonObject.push({"Address" : Address,"signature" : signature, "Wins" : Wins, "Date" : Date})
             console.log("jsonObject", jsonObject)
           

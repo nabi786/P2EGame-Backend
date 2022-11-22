@@ -8,8 +8,9 @@ const auth = (req, res, next)=>{
 
     // const authToken =  req.headers["authToken"]; 
     const authToken =  req.headers.authtoken
+    // console.log(req.headers)
 
-    console.log("authToken",authToken,req.headers)
+    // console.log("authToken",authToken,req.headers)
     if(!authToken){
        return res.status(403).json({msg:"authToken required"})
     }   
