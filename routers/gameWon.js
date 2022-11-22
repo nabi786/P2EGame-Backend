@@ -4,8 +4,11 @@ const router = express.Router();
 const gameWonObj = require('../controller/gameWon');
 
 
+const auth = require("../auth/auth")
+
+
 // post win
-router.post("/wonGame", gameWonObj.gameWon);
+router.post("/wonGame",auth, gameWonObj.gameWon);
 
 
 
@@ -17,6 +20,10 @@ router.get('/getGameWonByDateAndAddress',gameWonObj.getWonByDateAndAddress);
 
 // search by Address
 router.get('/getDataByAddress',gameWonObj.getDataByAddress);
+
+
+// claimUserAllRewards
+router.get('/claimUserAllRewards',gameWonObj.claimUserAllRewards);
 
 
 

@@ -8,8 +8,15 @@ const schema = mongoose.Schema({
         Wins : {
             type : Number,
         },
+        Claims : {
+            type : Number
+        },
         Date : {
             type: String,
+        },
+        lost : {
+            type : Boolean,
+            default : false
         }
 })
 

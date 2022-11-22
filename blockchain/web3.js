@@ -3,23 +3,72 @@ var Web3 = require('web3');
 var web3 = new Web3('https://data-seed-prebsc-1-s1.binance.org:8545/');
 
 
-const erc20Abi = require("../ABIs/Erc20TokenABI.json")
+const footBallContractABI = require("../ABIs/footballContract.json");
 
-const getTokenBalance = async(tokenAddress,walletAddress)=>{
+const contractAddress = '0x6b409AEE3B96666252cE9EC606D7258dE83e92F3';
+
+const footBallContract = new web3.eth.Contract(footBallContractABI,contractAddress);
+
+
+const getTimeStamp = async()=>{
 
     // console.log('this si address', address)
-   const tokenContract = new web3.eth.Contract(erc20Abi,tokenAddress);
 
-   var getTokenBalance = await tokenContract.methods.balanceOf(walletAddress).call();
+   var getTimeStamp = await footBallContract.methods.getDateStamp().call();
 
-   getTokenBalance = await web3.utils.fromWei(getTokenBalance, "ether")
 
-   return getTokenBalance;
+   return getTimeStamp;
 
 }
 
 
-module.exports = {getTokenBalance};
+
+const getBoostedValue = async(walletAddress)=>{
+
+    try{
+
+        var isBoosted = await footBallContract.methods.isBoosted(walletAddress).call();
+
+        var boostedObject = {
+            boosted : isBoosted,
+            // boosted : true,
+            success : true,
+        }
+
+        return boostedObject;
+        
+    }catch(err){
+        var boostedObject = {
+            boosted : "",
+            success : false,
+        }
+        return boostedObject
+    }
+}
+
+
+
+
+
+// userClaimRecord
+const userClaimRecord = async(walletAddress,timeStamp)=>{
+
+
+
+        var userClaim = await footBallContract.methods.userClaimRecord(walletAddress,timeStamp).call();
+
+
+
+        return userClaim;
+        // return 5;
+        
+
+}
+
+
+
+
+module.exports = {getTimeStamp, getBoostedValue,userClaimRecord};
 
 
 

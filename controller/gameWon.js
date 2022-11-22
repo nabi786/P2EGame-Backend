@@ -1,95 +1,132 @@
-const model = require("../model/model")
-const {getTokenBalance} = require('../blockchain/web3')
+const model = require("../model/model");
+const { getTimeStamp, getBoostedValue, userClaimRecord} = require("../blockchain/web3");
+
+var Web3 = require('web3');
+
+// var web3 = new Web3('https://data-seed-prebsc-1-s1.binance.org:8545/');
+const web3 = new Web3();
 
 
-
-// check bosted to check
-function checkBoosted(address){    
-    return false;
-}
 
 
 
 // game won function
-const gameWon = async (req,res)=>{
+const gameWon = async (req, res) => {
+  try {
+  
+    var date = await getTimeStamp();
+    // date = '1669167191';
+    var winNumber = 1;
+
+
+      var gameWonStatus = req.body.gameWonStatus;
+
+      var findAddress = await model.p2eGame.findOne({
+          Address: req.body.userAddress,
+          Date: date,
+        });
+
+        // await check claim
+       var checkClaim = claimData = await userClaimRecord(req.body.userAddress,date)
+
+       console.log('chec claim', checkClaim)
+
+        if (gameWonStatus === "win") {
+          
+          // getClaimData
+          
+          // console.log(findAddress)
+          if(findAddress == null || findAddress.lost != true){
+
+
     
-    try {
+            var isBoosted = await getBoostedValue(req.body.userAddress);
 
-        
-        // getDate
-        var date = new Date();
-        date = date.toLocaleDateString()
-        // date = '11/26/2022'
-        var winNumber = 1;
-
-        if(process.env.SECRET_KEY === req.body.secretKey){
-
-       
-
-            var gameWonStatus = req.body.gameWonStatus;
-
-            if(gameWonStatus === "win"){
+            if (isBoosted.success != false) {
+            if (isBoosted.boosted == true) {
                 
-                var findAddress = await model.p2eGame.findOne({Address : req.body.userAddress,Date : date})
-
-                var isBoosted = checkBoosted(req.body.userAddress)
-
-                if(isBoosted == true){
-                    winNumber = 2
-                }
-
-                    // getting Balance of token 
-                    // await getTokenBalance("tokenAddress","walletAddress")
-                    var Balance = await getTokenBalance("0x40E43bEc9207AC6d9Ca75c473b9048EA7f5a6764","0x4403c35cCe9eDB32f01D32ac0b25F0aDBB98Bf20")
-                    console.log('this is tokenBalance in Ether', Balance);
-
-                    if(findAddress){
-                        
-                    
-                        if(isBoosted != true){
-                            findAddress.Wins += 1;
-                        }else{
-                            findAddress.Wins += winNumber;
-                        }
-                
-                        if(findAddress.Wins < 30){
-                            await findAddress.save()
-                        }
-
-
-                        res.status(200).json({msg : "game Won", userData  : findAddress})
-                    }else{
-
-                        
-                        var data = new model.p2eGame({
-                            Address : req.body.userAddress,
-                            Wins : winNumber,
-                            Date : date
-                        })
-                
-                        await data.save();
-
-                        res.status(200).json({msg : "game Won", userData  : data})
-                    }
-
-
-                
-            }else if(gameWonStatus === "lost"){
-                res.status(200).json({msg : "you lost"})
-            }else{
-                res.status(200).json({msg : "invalid gameWinStatus"})
+                winNumber = 2;
             }
 
 
-        }else{
-            res.status(200).json({success : false, msg : "invalid SecretKey"})
-        }   
 
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({msg : "something went wrong from server", success : false})
+            if (findAddress) {
+                
+                if(isBoosted.boosted == true){
+                    if(findAddress.Wins == 29){
+                        findAddress.Wins += (winNumber-1);
+                    }else{
+                        findAddress.Wins += winNumber
+                    }
+                }else{
+                    findAddress.Wins += winNumber;
+                }
+               
+
+                if (findAddress.Wins <= 30) {
+
+                    findAddress.Claims = checkClaim
+                    await findAddress.save();
+                    res.status(200).json({ msg: "game Won", userData: findAddress });
+
+                }else{
+                    res.status(200).json({ msg: "won limit ends"});
+                }
+
+            } else {
+                var data = new model.p2eGame({
+                Address: req.body.userAddress,
+                Wins: winNumber,
+                Date: date,
+                Claims : checkClaim
+                });
+
+                await data.save();
+
+                res.status(200).json({ msg: "game Won", userData: data });
+            }
+            } else {
+            res.status(200).json({ success: false, msg: "invalid userAddress" });
+            }
+        
+
+        }else{
+
+            res.status(200).json({ msg: "can not register more win" });
+
+        }
+    
+    } else if (gameWonStatus === "lost") {
+
+        // console.log(findAddress)
+        if(findAddress != null){
+          findAddress.lost = true;
+          findAddress.Claims = checkClaim
+          await findAddress.save()
+          res.status(200).json({msg : "can not register more win"});
+
+        }else{
+          res.status(200).json({msg : "can not register win"});
+        }
+
+    } else {
+        res.status(200).json({ msg: "invalid gameWinStatus" });
     }
-}
+
+
+    
+
+
+
+} catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ msg: "something went wrong from server", success: false });
+  }
+};
+
+
 
 
 
@@ -97,32 +134,32 @@ const gameWon = async (req,res)=>{
 
 // get game won by Date
 
-const getWonByDate = async (req,res)=>{
+const getWonByDate = async (req, res) => {
+  try {
+    if (process.env.SECRET_KEY === req.body.secretKey) {
+      var getGameWonByDate = await model.p2eGame.find({ Date: req.body.Date });
 
-    try {
-        
-        if(process.env.SECRET_KEY === req.body.secretKey){
-
-
-                var getGameWonByDate = await model.p2eGame.find({Date : req.body.Date})
-
-                if(getGameWonByDate.length > 0){
-
-                    res.status(200).json({success : true, wonData :  getGameWonByDate})
-
-                }else{
-
-                    res.status(404).json({success: false , wonData : [], msg : "no game won status found in this date"})
-                }
-        }else{  
-            res.status(200).json({success: false ,  msg : "invalid SecretKey"})
-        }
-
-    } catch (error) {
-        res.status(500).json({success : false, msg : "something went wrong from server side"})
+      if (getGameWonByDate.length > 0) {
+        res.status(200).json({ success: true, wonData: getGameWonByDate });
+      } else {
+        res
+          .status(404)
+          .json({
+            success: false,
+            wonData: [],
+            msg: "no game won status found in this date",
+          });
+      }
+    } else {
+      res.status(200).json({ success: false, msg: "invalid SecretKey" });
     }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, msg: "something went wrong from server side" });
+  }
+};
 
-}
 
 
 
@@ -130,30 +167,76 @@ const getWonByDate = async (req,res)=>{
 
 
 // get all game won by date and address
-const getWonByDateAndAddress = async(req,res)=>{
-    try {
+const getWonByDateAndAddress = async (req, res) => {
+  try {
+    if (process.env.SECRET_KEY === req.body.secretKey) {
+      var getData = await model.p2eGame.find({
+        Address: req.body.Address,
+        Date: req.body.Date,
+      });
+
+      if (getData.length > 0) {
+        res.status(200).json({ success: true, gameWonData: getData });
+      } else {
+        res
+          .status(404)
+          .json({ success: false, msg: "no data found", gameWonData: [] });
+      }
+    } else {
+      res.status(200).json({ success: false, msg: "invalid secret Key" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, msg: "something went wrong" });
+  }
+};
+
+
+
+
+
+
+// getWon by address
+const getDataByAddress = async (req, res) => {
+  try {
+
+
+
+      
+      
+      var addressData = await getFilteredData(req.body.Address)
         
-        if(process.env.SECRET_KEY === req.body.secretKey){
-            
 
-                var getData = await model.p2eGame.find({Address : req.body.Address, Date : req.body.Date})
 
-                if(getData.length > 0){
 
-                    
-                    res.status(200).json({success: true ,gameWonData :  getData})
-                }else{
-                    res.status(404).json({success : false, msg : "no data found", gameWonData : []})
-                }
+        if (addressData.length > 0)
+        {
+            res.status(200).json({ success: true, addressData: addressData });
+        } else {
+            res.status(404).json({ success: false, msg: "no data not found" });
+        }
 
-                
-        }else{
-                
-            res.status(200).json({success : false, msg : "invalid secret Key"})
-        }        
-    } catch (error) {
-        res.status(500).json({success : false ,msg : "something went wrong"});
-    }
+
+
+ 
+} catch (error) {
+    res
+      .status(500)
+      .json({ success: false, msg: "something went wrong from server side" });
+  }
+};
+
+
+
+
+
+
+
+async function getFilteredData(address){
+
+  var allFilteredData = await model.p2eGame.find({ $and: [ { Address:address}, { $expr: {$gt: ["$Wins","$Claims"] } } ] })
+  
+    return allFilteredData;
+
 }
 
 
@@ -161,35 +244,124 @@ const getWonByDateAndAddress = async(req,res)=>{
 
 
 
-// search by address
-const getDataByAddress = async(req,res)=>{
+
+
+function getmessageHash(userAddress_, userIP_, tokenAmount_){
+
+  const data = web3.utils.soliditySha3(userAddress_, userIP_, tokenAmount_);
+  return data;
+}
+
+function signMessage(msgHash, signerAddress, signerKey){
+  web3.eth.defaultAccount = signerAddress;
+  const signObj = web3.eth.accounts.sign(msgHash, signerKey);
+  return signObj;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// claim
+const claimUserAllRewards = async (req, res) => {
+
     try {
 
 
-        if(process.env.SECRET_KEY === req.body.secretKey){
+        var allFilteredData = await getFilteredData(req.body.Address);
+        
+        console.log(allFilteredData)
+        
+        
+        if(allFilteredData.length > 0){
+          var jsonObject =[];
+          
+          var Address = [];
+          var signature = [];
+          var Wins = [];
+          var Date = [];
+          
+           await allFilteredData.forEach(async(item,index)=>{
+            
+              // blocchain
+              // var newClaimData = await userClaimRecord(item.Address, item.Date);
+              var newClaimData = 9;
+            
+              if(newClaimData > item.Claims){
+
+                  item.Claims = newClaimData;
+                  await item.save();
+
+              } 
+
+              var winsMinusClaim = item.Wins - newClaimData;
+              console.log("winsMinusClaim",winsMinusClaim)
+
+              console.log("item address", item.Address)
+              console.log("item item.Wins", item.Wins)
+              console.log("item item.Date", item.Date)
+
+
+              if(item.Claims < item.Wins){
+                
+                
+                var hash = await getmessageHash(item.Address, winsMinusClaim, item.Date);
+                var sign = await signMessage(hash, process.env.SIGNER_ADDRESS, process.env.SIGNER_PK);
+                
+                console.log("this is Hash", sign);
+
+                 Address.push(item.Address);
+                 signature.push(sign);
+                 Wins.push(winsMinusClaim);
+                 Date.push( item.Date);
+             
 
                 
-                var addressData = await model.p2eGame.find({Address : req.body.Address});
+              }
+              
+            });
+            
+            jsonObject.push({"Address" : Address,"signature" : signature, "Wins" : Wins, "Date" : Date})
+            console.log("jsonObject", jsonObject)
+          
 
-                if(addressData.length > 0){
-
-                    
-
-                    res.status(200).json({success : true, addressData : addressData})            
-                }else{
+            // console.log("this si claim ary", signsAry)
+            // var responseObject = {claimsAry,userAddress,DatesAry,signsAry};
 
 
-                    res.status(404).json({success : false,msg : "no data not found"})            
-                }
-                
-        }else{
-                
-            res.status(200).json({success : false,msg : "invalid SecretKey"})            
+            res.status(200).json({success : true, jsonObject : jsonObject});
+
+          }else{
+            
+            res.status(200).json({success : false, responseObject : []});
         }
-    } catch (error) {
-        res.status(500).json({success : false,msg : "something went wrong from server side"})            
+
+        // in loop body 
+        // claims = win-claims
+        // res.send({"status":true,"signature": sign.signature});
+        // res.send({"status":true,"signature" : "sign"});
+        // arry of final response 
+        // arry claims,userAddress, Date,sign
+    
+        
+
+   
+  } catch (error) {
+    console.log(error)
+      res
+        .status(500)
+        .json({ success: false, msg: "something went wrong from server side" });
     }
-}
+};
+  
 
 
 
@@ -201,9 +373,6 @@ const getDataByAddress = async(req,res)=>{
 
 
 
-const gameWonObject={
-    gameWon,getWonByDate,getWonByDateAndAddress,getDataByAddress
-}
 
 
 
@@ -212,6 +381,14 @@ const gameWonObject={
 
 
 
+// making object
+const gameWonObject = {
+  gameWon,
+  getWonByDate,
+  getWonByDateAndAddress,
+  getDataByAddress,
+  claimUserAllRewards
+};
 
 
 
