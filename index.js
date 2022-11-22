@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 require("./config/DataBase");
 const express = require('express');
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const cors= require('cors')
 
 const bodyParser = require('body-parser')
@@ -29,11 +29,11 @@ app.use('/api', gameWon)
 
 
 app.get('/',(req,res)=>{
-    res.status(200).json({msg: "P2E Game backend is running"})
+    res.status(200).json({msg: "FootBall Game backend is running"})
 })
 
 
 
-app.listen(PORT, function(){
+app.listen(PORT, "0.0.0.0", function(){
     console.log('server started successfully')
 })
